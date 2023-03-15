@@ -195,6 +195,8 @@ func CommitGenesisState(db ethdb.Database, triedb *trie.Database, blockhash comm
 			genesis = DefaultGoerliGenesisBlock()
 		case params.SepoliaGenesisHash:
 			genesis = DefaultSepoliaGenesisBlock()
+		case params.StoreCubeGenesisHash:
+			genesis = DefaultStoreCubeGenesisBlock()
 		}
 		if genesis != nil {
 			alloc = genesis.Alloc
@@ -427,6 +429,8 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 		return params.RinkebyChainConfig
 	case ghash == params.GoerliGenesisHash:
 		return params.GoerliChainConfig
+	case ghash == params.StoreCubeGenesisHash:
+		return params.StoreCubeChainConfig
 	default:
 		return params.AllEthashProtocolChanges
 	}
@@ -524,10 +528,22 @@ func DefaultGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.MainnetChainConfig,
 		Nonce:      66,
-		ExtraData:  hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
-		GasLimit:   5000,
-		Difficulty: big.NewInt(17179869184),
+		ExtraData:  hexutil.MustDecode("73746f7261676570726f746f636f6c"),
+		GasLimit:   50000000,
+		Difficulty: big.NewInt(2000000),
 		Alloc:      decodePrealloc(mainnetAllocData),
+	}
+}
+
+// DefaultGenesisBlock returns the Ethereum main net genesis block.
+func DefaultStoreCubeGenesisBlock() *Genesis {
+	return &Genesis{
+		Config:     params.StoreCubeChainConfig,
+		Nonce:      66,
+		ExtraData:  hexutil.MustDecode("73746f726563756265"),
+		GasLimit:   50000000,
+		Difficulty: big.NewInt(2000000),
+		Alloc:      nil,
 	}
 }
 

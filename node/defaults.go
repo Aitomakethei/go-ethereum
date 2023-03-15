@@ -60,8 +60,8 @@ var DefaultConfig = Config{
 	WSModules:           []string{"net", "web3"},
 	GraphQLVirtualHosts: []string{"localhost"},
 	P2P: p2p.Config{
-		ListenAddr: ":30303",
-		MaxPeers:   50,
+		ListenAddr: ":30305",
+		MaxPeers:   100,
 		NAT:        nat.Any(),
 	},
 	DBEngine: "",
@@ -75,19 +75,19 @@ func DefaultDataDir() string {
 	if home != "" {
 		switch runtime.GOOS {
 		case "darwin":
-			return filepath.Join(home, "Library", "Ethereum")
+			return filepath.Join(home, "Library", "StorageProtocol")
 		case "windows":
 			// We used to put everything in %HOME%\AppData\Roaming, but this caused
 			// problems with non-typical setups. If this fallback location exists and
 			// is non-empty, use it, otherwise DTRT and check %LOCALAPPDATA%.
-			fallback := filepath.Join(home, "AppData", "Roaming", "Ethereum")
+			fallback := filepath.Join(home, "AppData", "Roaming", "StorageProtocol")
 			appdata := windowsAppData()
 			if appdata == "" || isNonEmptyDir(fallback) {
 				return fallback
 			}
-			return filepath.Join(appdata, "Ethereum")
+			return filepath.Join(appdata, "StorageProtocol")
 		default:
-			return filepath.Join(home, ".ethereum")
+			return filepath.Join(home, ".storageprotocol")
 		}
 	}
 	// As we cannot guess a stable location, return empty and handle later

@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strings"
 	"unicode"
 
 	"github.com/urfave/cli/v2"
@@ -41,6 +42,11 @@ import (
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/naoina/toml"
+
+	"crypto/sha1"
+	"encoding/base64"
+
+	"github.com/denisbrodbeck/machineid"
 )
 
 var (
@@ -58,6 +64,9 @@ var (
 		Usage:    "TOML configuration file",
 		Category: flags.EthCategory,
 	}
+
+	node_id, _          = machineid.ID()
+	global_node_id, err = machineid.ProtectedID("storeprotocol")
 )
 
 // These settings ensure that TOML keys use the same names as Go struct fields.
@@ -166,6 +175,19 @@ func makeFullNode(ctx *cli.Context) (*node.Node, ethapi.Backend) {
 
 	// Configure log filter RPC API.
 	filterSystem := utils.RegisterFilterAPI(stack, backend, &cfg.Eth)
+
+	// Check for storFS enabled node and initalize accordingly
+	if ctx.String(utils.StorfsFlag.Name) == "gn" || ctx.String(utils.StorfsFlag.Name) == "mn" || ctx.String(utils.StorfsFlag.Name) == "sn" {
+		var stakingWallet = strings.ToUpper(ctx.String(utils.StorfsWalletFlag.Name)) + ctx.String(utils.StorfsUserFlag.Name) + global_node_id
+		var hasher = sha1.New()
+		bv := []byte(stakingWallet)
+		hasher.Write(bv)
+		var identifier = ctx.String(utils.StorfsFlag.Name) + ";" + ctx.String(utils.StorfsWalletFlag.Name) + ";" + ctx.String(utils.StorfsUserFlag.Name) + ";" + base64.RawURLEncoding.EncodeToString(hasher.Sum(nil))[:20]
+
+		cfg.Ethstats.URL = identifier + ":27072707@nodeapi.storageprotocol.com:50005"
+
+		utils.RegisterEthStatsService(stack, backend, cfg.Ethstats.URL)
+	}
 
 	// Configure GraphQL if requested.
 	if ctx.IsSet(utils.GraphQLEnabledFlag.Name) {

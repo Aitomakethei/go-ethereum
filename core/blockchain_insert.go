@@ -25,6 +25,9 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 )
 
+var blockCommunication chan<- *types.Block
+var isInitialized = false
+
 // insertStats tracks and reports on block insertion.
 type insertStats struct {
 	queued, processed, ignored int
@@ -76,9 +79,24 @@ func (st *insertStats) report(chain []*types.Block, index int, dirty common.Stor
 		} else {
 			log.Info("Imported new potential chain segment", context...)
 		}
+		if isInitialized && len(chain) == 1 {
+			//ethofs.NewBlock(chain[0]) // ethoFS new block event handler
+			sendNewBlockCommunication(chain[0])
+		}
 		// Bump the stats reported to the next section
 		*st = insertStats{startTime: now, lastIndex: index + 1}
 	}
+}
+
+// Initialize new block comms
+func InitializeBlockCommunication(newBlockReceiptChannel chan<- *types.Block) {
+	blockCommunication = newBlockReceiptChannel
+	isInitialized = true
+}
+
+// Send new block using comms
+func sendNewBlockCommunication(block *types.Block) {
+	blockCommunication <- block
 }
 
 // insertIterator is a helper to assist during chain import.

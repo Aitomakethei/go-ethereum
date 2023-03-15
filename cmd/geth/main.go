@@ -29,6 +29,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/console/prompt"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/downloader"
@@ -39,6 +41,9 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/node"
+
+	// Add StorFs Module
+	"github.com/ethereum/go-ethereum/storfs"
 
 	// Force-load the tracer engines to trigger registration
 	_ "github.com/ethereum/go-ethereum/eth/tracers/js"
@@ -54,6 +59,12 @@ const (
 var (
 	// flags that configure the node
 	nodeFlags = flags.Merge([]cli.Flag{
+		utils.StorfsFlag,
+		utils.StorfsWalletFlag,
+		utils.StorfsUserFlag,
+		utils.StorfsConfigFlag,
+		utils.StorfsInitFlag,
+
 		utils.IdentityFlag,
 		utils.UnlockedAccountFlag,
 		utils.PasswordFileFlag,
@@ -283,6 +294,10 @@ func prepare(ctx *cli.Context) {
 	case ctx.IsSet(utils.SepoliaFlag.Name):
 		log.Info("Starting Geth on Sepolia testnet...")
 
+	case ctx.IsSet(utils.StoreCubeFlag.Name):
+		log.Info("Starting Geth on StoreCube testnet...")
+
+
 	case ctx.IsSet(utils.DeveloperFlag.Name):
 		log.Info("Starting Geth in ephemeral dev mode...")
 		log.Warn(`You are running Geth in --dev mode. Please note the following:
@@ -311,6 +326,7 @@ func prepare(ctx *cli.Context) {
 			!ctx.IsSet(utils.RinkebyFlag.Name) &&
 			!ctx.IsSet(utils.GoerliFlag.Name) &&
 			!ctx.IsSet(utils.DeveloperFlag.Name) {
+			!ctx.IsSet(utils.StoreCubeFlag.Name) {
 			// Nope, we're really on mainnet. Bump that cache up!
 			log.Info("Bumping default cache on mainnet", "provided", ctx.Int(utils.CacheFlag.Name), "updated", 4096)
 			ctx.Set(utils.CacheFlag.Name, strconv.Itoa(4096))
@@ -368,6 +384,25 @@ func startNode(ctx *cli.Context, stack *node.Node, backend ethapi.Backend, isCon
 		utils.Fatalf("Failed to attach to self: %v", err)
 	}
 	ethClient := ethclient.NewClient(rpcClient)
+
+	log.Info("STARTING STORFS CLIENT..")
+	// Check for Storfs enabled node and initalize accordingly
+	if ctx.IsSet(utils.StorfsFlag.Name) && (ctx.String(utils.StorfsFlag.Name) == "gn" || ctx.String(utils.StorfsFlag.Name) == "mn" || ctx.String(utils.StorfsFlag.Name) == "sn") {
+		if ctx.Bool(utils.StorfsInitFlag.Name) {
+			blockCommunication := make(chan *types.Block)
+			Storfs.InitializeStorfs(ctx.Bool(utils.StorfsInitFlag.Name), ctx.Bool(utils.StorfsConfigFlag.Name), ctx.String(utils.StorfsFlag.Name), blockCommunication)
+		} else if ctx.Bool(utils.StorfsConfigFlag.Name) {
+			blockCommunication := make(chan *types.Block)
+			Storfs.InitializeStorfs(ctx.Bool(utils.StorfsInitFlag.Name), ctx.Bool(utils.StorfsConfigFlag.Name), ctx.String(utils.StorfsFlag.Name), blockCommunication)
+		} else {
+			blockCommunication := make(chan *types.Block)
+			core.InitializeBlockCommunication(blockCommunication)
+			Storfs.InitializeStorfs(ctx.Bool(utils.StorfsInitFlag.Name), ctx.Bool(utils.StorfsConfigFlag.Name), ctx.String(utils.StorfsFlag.Name), blockCommunication)
+		}
+	} else if ctx.IsSet(utils.StorfsFlag.Name) {
+		log.Error("Invalid Storfs Flag/Node Type - Exiting")
+		os.Exit(0)
+	}
 
 	go func() {
 		// Open any wallets already attached

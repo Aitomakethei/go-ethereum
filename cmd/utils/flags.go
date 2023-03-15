@@ -133,13 +133,13 @@ var (
 	}
 	NetworkIdFlag = &cli.Uint64Flag{
 		Name:     "networkid",
-		Usage:    "Explicitly set network id (integer)(For testnets: use --rinkeby, --goerli, --sepolia instead)",
+		Usage:    "Explicitly set network id (integer)(For testnets: use --rinkeby, --goerli, --sepolia, --storecube instead)",
 		Value:    ethconfig.Defaults.NetworkId,
 		Category: flags.EthCategory,
 	}
 	MainnetFlag = &cli.BoolFlag{
 		Name:     "mainnet",
-		Usage:    "Ethereum mainnet",
+		Usage:    "Storage Protocol mainnet",
 		Category: flags.EthCategory,
 	}
 	RinkebyFlag = &cli.BoolFlag{
@@ -155,6 +155,11 @@ var (
 	SepoliaFlag = &cli.BoolFlag{
 		Name:     "sepolia",
 		Usage:    "Sepolia network: pre-configured proof-of-work test network",
+		Category: flags.EthCategory,
+	}
+	StoreCubeFlag = &cli.BoolFlag{
+		Name:     "storecube",
+		Usage:    "StoreCube network: pre-configured proof-of-work test network",
 		Category: flags.EthCategory,
 	}
 
@@ -808,7 +813,7 @@ var (
 	ListenPortFlag = &cli.IntFlag{
 		Name:     "port",
 		Usage:    "Network listening port",
-		Value:    30303,
+		Value:    30305,
 		Category: flags.NetworkingCategory,
 	}
 	BootnodesFlag = &cli.StringFlag{
@@ -856,7 +861,7 @@ var (
 	DiscoveryPortFlag = &cli.IntFlag{
 		Name:     "discovery.port",
 		Usage:    "Use a custom UDP port for P2P discovery",
-		Value:    30303,
+		Value:    30305,
 		Category: flags.NetworkingCategory,
 	}
 
@@ -994,6 +999,42 @@ Please note that --` + MetricsHTTPFlag.Name + ` must be set to start the server.
 		Value:    metrics.DefaultConfig.InfluxDBOrganization,
 		Category: flags.MetricsCategory,
 	}
+
+	// Storfs Node Flag
+	StorfsFlag = &cli.StringFlag{
+		Name:     "Storfs",
+		Usage:    "Storfs node type to be initialized",
+		Value:    "",
+		Category: flags.StorfsCategory,
+	}
+	// Node Usertoken Flag
+	StorfsUserFlag = &cli.StringFlag{
+		Name:     "StorfsUser",
+		Usage:    "Node User initialization",
+		Value:    "",
+		Category: flags.StorfsCategory,
+	}
+	// Node Staking Flag
+	StorfsWalletFlag = &cli.StringFlag{
+		Name:     "StorfsWallet",
+		Usage:    "Node Staking Wallet initialization",
+		Value:    "",
+		Category: flags.StorfsCategory,
+	}
+	// Storfs Repo Init Flag
+	StorfsInitFlag = &cli.BoolFlag{
+		Name:     "StorfsInit",
+		Usage:    "Storfs repo initialization",
+		//Value:    "",
+		Category: flags.StorfsCategory,
+	}
+	// Storfs Node/Repo Config Flag
+	StorfsConfigFlag = &cli.BoolFlag{
+		Name:     "StorfsConfig",
+		Usage:    "Storfs node type configuration",
+		Category: flags.StorfsCategory,
+	}
+
 )
 
 var (
@@ -1002,6 +1043,7 @@ var (
 		RinkebyFlag,
 		GoerliFlag,
 		SepoliaFlag,
+		StoreCubeFlag,
 	}
 	// NetworkFlags is the flag group of all built-in supported networks.
 	NetworkFlags = append([]cli.Flag{MainnetFlag}, TestnetFlags...)
@@ -1034,6 +1076,9 @@ func MakeDataDir(ctx *cli.Context) string {
 		}
 		if ctx.Bool(SepoliaFlag.Name) {
 			return filepath.Join(path, "sepolia")
+		}
+		if ctx.Bool(StoreCubeFlag.Name) {
+			return filepath.Join(path, "storecube")
 		}
 		return path
 	}
@@ -1539,6 +1584,9 @@ func SetDataDir(ctx *cli.Context, cfg *node.Config) {
 	case ctx.Bool(SepoliaFlag.Name) && cfg.DataDir == node.DefaultDataDir():
 		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "sepolia")
 	}
+	case ctx.Bool(StoreCubeFlag.Name) && cfg.DataDir == node.DefaultDataDir():
+		cfg.DataDir = filepath.Join(node.DefaultDataDir(), "storecube")
+	}
 }
 
 func setGPO(ctx *cli.Context, cfg *gasprice.Config, light bool) {
@@ -1728,7 +1776,7 @@ func CheckExclusive(ctx *cli.Context, args ...interface{}) {
 // SetEthConfig applies eth-related command line flags to the config.
 func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 	// Avoid conflicting network flags
-	CheckExclusive(ctx, MainnetFlag, DeveloperFlag, RinkebyFlag, GoerliFlag, SepoliaFlag)
+	CheckExclusive(ctx, MainnetFlag, DeveloperFlag, RinkebyFlag, GoerliFlag, SepoliaFlag, StoreCubeFlag)
 	CheckExclusive(ctx, LightServeFlag, SyncModeFlag, "light")
 	CheckExclusive(ctx, DeveloperFlag, ExternalSignerFlag) // Can't use both ephemeral unlocked and external signer
 	if ctx.String(GCModeFlag.Name) == "archive" && ctx.Uint64(TxLookupLimitFlag.Name) != 0 {
@@ -1894,6 +1942,12 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 		}
 		cfg.Genesis = core.DefaultGoerliGenesisBlock()
 		SetDNSDiscoveryDefaults(cfg, params.GoerliGenesisHash)
+	case ctx.Bool(StoreCubeFlag.Name):
+		if !ctx.IsSet(NetworkIdFlag.Name) {
+			cfg.NetworkId = 323535
+		}
+		cfg.Genesis = core.DefaultStoreCubeGenesisBlock()
+		SetDNSDiscoveryDefaults(cfg, params.StoreCubeGenesisHash)
 	case ctx.Bool(DeveloperFlag.Name):
 		if !ctx.IsSet(NetworkIdFlag.Name) {
 			cfg.NetworkId = 1337
@@ -2214,6 +2268,8 @@ func MakeGenesis(ctx *cli.Context) *core.Genesis {
 		genesis = core.DefaultRinkebyGenesisBlock()
 	case ctx.Bool(GoerliFlag.Name):
 		genesis = core.DefaultGoerliGenesisBlock()
+	case ctx.Bool(StoreCubeFlag.Name):
+		genesis = core.DefaultStoreCubeGenesisBlock()
 	case ctx.Bool(DeveloperFlag.Name):
 		Fatalf("Developer chains are ephemeral")
 	}

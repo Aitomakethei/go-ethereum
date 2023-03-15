@@ -1798,6 +1798,11 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals, setHead bool)
 		}
 		atomic.StoreUint32(&followupInterrupt, 1)
 		if err != nil {
+			if err == ErrDelayTooHigh {
+				stats.ignored += len(it.chain)
+				bc.reportBlock(block, nil, err)
+			}
+			atomic.StoreUint32(&followupInterrupt, 1)
 			return it.index, err
 		}
 		// Update the metrics touched during block commit
@@ -2139,6 +2144,15 @@ func (bc *BlockChain) reorg(oldHead *types.Header, newHead *types.Block) error {
 			msg = "Large chain reorg detected"
 			logFn = log.Warn
 		}
+
+		// Penalty System to check delayed chain
+		err := bc.CheckDelayedChain(newChain, false, true)
+		if err == ErrDelayTooHigh {
+			return err
+		}
+		blockReorgAddMeter.Mark(int64(len(newChain)))
+		blockReorgDropMeter.Mark(int64(len(oldChain)))
+
 		logFn(msg, "number", commonBlock.Number(), "hash", commonBlock.Hash(),
 			"drop", len(oldChain), "dropfrom", oldChain[0].Hash(), "add", len(newChain), "addfrom", newChain[0].Hash())
 		blockReorgAddMeter.Mark(int64(len(newChain)))

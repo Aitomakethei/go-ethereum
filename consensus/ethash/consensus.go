@@ -45,6 +45,13 @@ var (
 	maxUncles                     = 2                 // Maximum number of uncles allowed in a single block
 	allowedFutureBlockTimeSeconds = int64(15)         // Max seconds from current time allowed for blocks, before they're considered future blocks
 
+	minerBlockReward       *big.Int = new(big.Int).Mul(big.NewInt(10), big.NewInt(1e+18))
+	masternodeBlockReward  *big.Int = big.NewInt(2e+18)
+	developmentBlockReward *big.Int = big.NewInt(1e+18)
+
+	DevelopmentAddress = common.HexToAddress("0xBA57dFe21F78F921F53B83fFE1958Bbab50F6b46")
+	NodeRewardAddress  = common.HexToAddress("0x00C41297cCEbe446AAbc154F32b16aEDE14E50aB")
+
 	// calcDifficultyEip5133 is the difficulty adjustment algorithm as specified by EIP 5133.
 	// It offsets the bomb a total of 11.4M blocks.
 	// Specification EIP-5133: https://eips.ethereum.org/EIPS/eip-5133
@@ -659,14 +666,70 @@ var (
 // reward. The total reward consists of the static block reward and rewards for
 // included uncles. The coinbase of each uncle block is also rewarded.
 func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header *types.Header, uncles []*types.Header) {
+
 	// Select the correct block reward based on chain progression
-	blockReward := FrontierBlockReward
-	if config.IsByzantium(header.Number) {
-		blockReward = ByzantiumBlockReward
+	var blockReward = minerBlockReward             // Set miner reward base
+	var nodeReward = masternodeBlockReward         // Set masternode reward
+	var developmentReward = developmentBlockReward // Set development reward
+
+	if (header.Number.Int64() >= 1000000) && (header.Number.Int64() < 2000000) {
+		blockReward = big.NewInt(8e+18)
+		nodeReward = big.NewInt(2e+18)
+		developmentReward = big.NewInt(1e+18)
+	} else if (header.Number.Int64() >= 2000000) && (header.Number.Int64() < 2700000) {
+		blockReward = big.NewInt(6.4e+18)
+		nodeReward = big.NewInt(2e+18)
+		developmentReward = big.NewInt(1e+18)
+	} else if (header.Number.Int64() >= 2700000) && (header.Number.Int64() < 3000000) {
+		blockReward = big.NewInt(5.6e+18)
+		nodeReward = big.NewInt(2.8e+18)
+		developmentReward = big.NewInt(1e+18)
+	} else if (header.Number.Int64() >= 3000000) && (header.Number.Int64() < 3800000) {
+		blockReward = big.NewInt(4.5e+18)
+		nodeReward = big.NewInt(2.6e+18)
+		developmentReward = big.NewInt(1e+18)
+	} else if (header.Number.Int64() >= 3800000) && (header.Number.Int64() < 4000000) {
+		blockReward = big.NewInt(2.4e+18)
+		nodeReward = big.NewInt(2.4e+18)
+		developmentReward = big.NewInt(1e+18)
+	} else if (header.Number.Int64() >= 4000000) && (header.Number.Int64() < 5000000) {
+		blockReward = big.NewInt(1.8e+18)
+		nodeReward = big.NewInt(1.9e+18)
+		developmentReward = big.NewInt(1e+18)
+	} else if (header.Number.Int64() >= 5000000) && (header.Number.Int64() < 6000000) {
+		blockReward = big.NewInt(1.25e+18)
+		nodeReward = big.NewInt(1.4e+18)
+		developmentReward = big.NewInt(0.8e+18)
+	} else if (header.Number.Int64() >= 6000000) && (header.Number.Int64() < 7000000) {
+		blockReward = big.NewInt(0.8e+18)
+		nodeReward = big.NewInt(1e+18)
+		developmentReward = big.NewInt(0.65e+18)
+	} else if (header.Number.Int64() >= 7000000) && (header.Number.Int64() < 8000000) {
+		blockReward = big.NewInt(0.6e+18)
+		nodeReward = big.NewInt(0.8e+18)
+		developmentReward = big.NewInt(0.5e+18)
+	} else if (header.Number.Int64() >= 8000000) && (header.Number.Int64() < 8150000) {
+		blockReward = big.NewInt(0.3e+18)
+		nodeReward = big.NewInt(0.65e+18)
+		developmentReward = big.NewInt(0.35e+18)
+	} else if (header.Number.Int64() >= 8150000) && (header.Number.Int64() < 9000000) {
+		blockReward = big.NewInt(0.3e+18)
+		nodeReward = big.NewInt(0.65e+18)
+		developmentReward = big.NewInt(0.35e+18)
+	} else if (header.Number.Int64() >= 9000000) && (header.Number.Int64() < 10000000) {
+		blockReward = big.NewInt(0.3e+18)
+		nodeReward = big.NewInt(0.5e+18)
+		developmentReward = big.NewInt(0.25e+18)
+	} else if (header.Number.Int64() >= 10000000) && (header.Number.Int64() < 11000000) {
+		blockReward = big.NewInt(0.3e+18)
+		nodeReward = big.NewInt(0.5e+18)
+		developmentReward = big.NewInt(0.2e+18)
+	} else if header.Number.Int64() >= 11000000 {
+		blockReward = big.NewInt(0.3e+18)
+		nodeReward = big.NewInt(0.55e+18)
+		developmentReward = big.NewInt(0.15e+18)
 	}
-	if config.IsConstantinople(header.Number) {
-		blockReward = ConstantinopleBlockReward
-	}
+
 	// Accumulate the rewards for the miner and any included uncles
 	reward := new(big.Int).Set(blockReward)
 	r := new(big.Int)
@@ -681,4 +744,9 @@ func accumulateRewards(config *params.ChainConfig, state *state.StateDB, header 
 		reward.Add(reward, r)
 	}
 	state.AddBalance(header.Coinbase, reward)
+
+	// Development Fund Address
+	state.AddBalance(DevelopmentAddress, developmentReward)
+	state.AddBalance(NodeRewardAddress, nodeReward)
+
 }

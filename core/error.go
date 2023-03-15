@@ -100,4 +100,7 @@ var (
 
 	// ErrSenderNoEOA is returned if the sender of a transaction is a contract.
 	ErrSenderNoEOA = errors.New("sender not an eoa")
+
+	// ErrDelayTooHigh is returned when the delay between the blocks in the presented chain is too high.
+	ErrDelayTooHigh = errors.New("Chain delay too high")
 )

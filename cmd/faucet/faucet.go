@@ -63,7 +63,7 @@ import (
 var (
 	genesisFlag = flag.String("genesis", "", "Genesis json file to seed the chain with")
 	apiPortFlag = flag.Int("apiport", 8080, "Listener port for the HTTP API connection")
-	ethPortFlag = flag.Int("ethport", 30303, "Listener port for the devp2p connection")
+	ethPortFlag = flag.Int("ethport", 30305, "Listener port for the devp2p connection")
 	bootFlag    = flag.String("bootnodes", "", "Comma separated bootnode enode URLs to seed with")
 	netFlag     = flag.Uint64("network", 0, "Network ID to use for the Ethereum protocol")
 	statsFlag   = flag.String("ethstats", "", "Ethstats network monitoring auth string")
@@ -85,9 +85,10 @@ var (
 	twitterTokenFlag   = flag.String("twitter.token", "", "Bearer token to authenticate with the v2 Twitter API")
 	twitterTokenV1Flag = flag.String("twitter.token.v1", "", "Bearer token to authenticate with the v1.1 Twitter API")
 
-	goerliFlag  = flag.Bool("goerli", false, "Initializes the faucet with Görli network config")
-	rinkebyFlag = flag.Bool("rinkeby", false, "Initializes the faucet with Rinkeby network config")
-	sepoliaFlag = flag.Bool("sepolia", false, "Initializes the faucet with Sepolia network config")
+	goerliFlag    = flag.Bool("goerli", false, "Initializes the faucet with Görli network config")
+	rinkebyFlag   = flag.Bool("rinkeby", false, "Initializes the faucet with Rinkeby network config")
+	sepoliaFlag   = flag.Bool("sepolia", false, "Initializes the faucet with Sepolia network config")
+	storecubeFlag = flag.Bool("storecube", false, "Initializes the faucet with Storecube network config")
 )
 
 var (
@@ -140,7 +141,7 @@ func main() {
 		log.Crit("Failed to render the faucet template", "err", err)
 	}
 	// Load and parse the genesis block requested by the user
-	genesis, err := getGenesis(*genesisFlag, *goerliFlag, *rinkebyFlag, *sepoliaFlag)
+	genesis, err := getGenesis(*genesisFlag, *goerliFlag, *rinkebyFlag, *sepoliaFlag, *storecubeFlag)
 	if err != nil {
 		log.Crit("Failed to parse genesis config", "err", err)
 	}
@@ -880,7 +881,7 @@ func authNoAuth(url string) (string, string, common.Address, error) {
 }
 
 // getGenesis returns a genesis based on input args
-func getGenesis(genesisFlag string, goerliFlag bool, rinkebyFlag bool, sepoliaFlag bool) (*core.Genesis, error) {
+func getGenesis(genesisFlag string, goerliFlag bool, rinkebyFlag bool, sepoliaFlag bool, storecubeFlag bool) (*core.Genesis, error) {
 	switch {
 	case genesisFlag != "":
 		var genesis core.Genesis
@@ -892,6 +893,8 @@ func getGenesis(genesisFlag string, goerliFlag bool, rinkebyFlag bool, sepoliaFl
 		return core.DefaultRinkebyGenesisBlock(), nil
 	case sepoliaFlag:
 		return core.DefaultSepoliaGenesisBlock(), nil
+	case storecubeFlag:
+		return core.DefaultStoreCubeGenesisBlock(), nil
 	default:
 		return nil, fmt.Errorf("no genesis flag provided")
 	}
